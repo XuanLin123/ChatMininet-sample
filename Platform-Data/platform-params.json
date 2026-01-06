@@ -1,0 +1,16 @@
+{
+    "API-Key" : {
+        "openai" : "" , 
+        "gemini" : "" , 
+        "cloud3" : "NONE" , 
+        "huggin" : "NONE"
+    } , 
+    
+
+    "Model-Name" : {
+        "openai" : "gpt-4-turbo" , 
+        "gemini" : "gemini-2.5-flash" , 
+        "cloud3" : "NONE" , 
+        "huggin" : "NONE"
+    }
+}

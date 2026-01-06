@@ -1,36 +1,46 @@
 #!/usr/bin/python
-from bottle import Bottle, request
 import time
+import json
+import logging
+import requests
+
+
+from bottle      import Bottle
+from bottle      import request
+from jinja2      import Template
+from dataclasses import dataclass
+from mininet.net import Containernet
 
 """
 MininetRest adds a REST API to mininet.
 
 """
 
-__author__ = 'Carlos Giraldo'
-__copyright__ = "Copyright 2015, AtlantTIC - University of Vigo"
-__credits__ = ["Carlos Giraldo"]
-__license__ = "GPL"
-__version__ = "0.0.1"
-__maintainer__ = "Carlos Giraldo"
-__email__ = "carlitosgiraldo@gmail.com"
-__status__ = "Prototype"
+__author__     = 'Carlos Giraldo , Chih-Heng Ke , Sheng-Xuan Lin and Ming-Chu Chou'
+__copyright__  = "Copyright 2015, AtlantTIC - University of Vigo ; Taiwan National Quemoy University"
+__credits__    = ["Carlos Giraldo"]
+__license__    = "GPL"
+__version__    = "0.1.0-dev"
+__maintainer__ = "Sheng-Xuan Lin"
+__email__      = "chris0123lin@gmail.com"
+__status__     = "Development"
 
 
 class MininetRest(Bottle):
     def __init__(self, net):
+        global mynodes, myhosts, myswitches
         super(MininetRest, self).__init__()
         self.net = net
-        self.route('/nodes', callback=self.get_nodes)
-        self.route('/nodes/<node_name>', callback=self.get_node)
-        self.route('/nodes/<node_name>', method='POST', callback=self.post_node)
-        self.route('/nodes/<node_name>/cmd', method='POST', callback=self.do_cmd)
-        self.route('/nodes/<node_name>/<intf_name>', callback=self.get_intf)
-        self.route('/nodes/<node_name>/<intf_name>', method='POST', callback=self.post_intf)
-        self.route('/hosts', method='GET', callback=self.get_hosts)
-        self.route('/switches', method='GET', callback=self.get_switches)
-        self.route('/links', method='GET', callback=self.get_links)
-
+        self.route('/nodes'                        ,                callback=self.get_nodes   )
+        self.route('/nodes/<node_name>'            ,                callback=self.get_node    )
+        self.route('/nodes/<node_name>'            , method='POST', callback=self.post_node   )
+        self.route('/nodes/<node_name>/cmd'        , method='POST', callback=self.do_cmd      )
+        self.route('/nodes/<node_name>/<intf_name>',                callback=self.get_intf    )
+        self.route('/nodes/<node_name>/<intf_name>', method='POST', callback=self.post_intf   )
+        self.route('/hosts'                        , method='GET' , callback=self.get_hosts   )
+        self.route('/switches'                     , method='GET' , callback=self.get_switches)
+        self.route('/links'                        , method='GET' , callback=self.get_links   )
+          
     def get_nodes(self):
         return {'nodes': [n for n in self.net]}
 
@@ -70,6 +80,20 @@ class MininetRest(Bottle):
                                node1=l.intf1.node.name, node2=l.intf2.node.name,
                                intf1=l.intf1.name, intf2=l.intf2.name) for l in self.net.links]}
 
+
+    # --------------------------------------------------------------------------------------
+
+    def ChangeHostIP(self , node_name , new_ip , new_netmask='24'):
+        node = self.net[node_name]
+
+        node.setIP(new_ip , prefixLen=int(new_netmask))
+        node.params['ip'] = new_ip
+
+        print(f"{node_name} 's IP change to {new_ip}/{new_netmask}")
+
+    # --------------------------------------------------------------------------------------
+
+
     def do_cmd(self, node_name):
         args = request.body.read()
         node = self.net[node_name]
@@ -99,3 +123,13 @@ class MininetRest(Bottle):
             output += data
             node.waiting = False
         return output
+
+
+logging.basicConfig(
+    handlers=[
+        logging.StreamHandler()
+    ],
+    format='%(asctime)s.%(msecs)03d %(levelname)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    level='INFO'
+)   
