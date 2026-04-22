@@ -22,9 +22,9 @@ if __name__ == '__main__' :
         PlatformParams = json.load(file)
 
     jsonfile = ImgConvertTopo(
-        "gemini"   , 
+        "openrouter"   , 
         PlatformParams["Model-Name"]["gemini"] , 
-        PlatformParams["API-Key"]   ["gemini"] , 
+        PlatformParams["API-Key"]   ["openrouter"] , 
         img_path="Platform-Data/topo.jpg"
     )
 
