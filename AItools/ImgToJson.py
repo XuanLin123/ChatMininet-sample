@@ -1,5 +1,5 @@
 import json
-
+import re
 
 
 def ImgConvertTopo(
@@ -7,6 +7,7 @@ def ImgConvertTopo(
     mnfile="Platform-Data/topo.mn" , default_mnfile="Platform-Data/default_mn.json"
 ) : 
     converters = {
+        "openrouter": lambda: openrouter_ConvertToTopo(model_name, api_key, img_path),
         "openai" : lambda : print(f"Not implemented : {company_name}") ,
         "gemini" : lambda : gemini_ConvertToTopo(model_name , api_key , img_path) ,
         "claud3" : lambda : print(f"Not implemented : {company_name}") ,
@@ -18,10 +19,14 @@ def ImgConvertTopo(
     if not result : 
         return
     try:
-        with open(output_path, 'w') as file:
+        raw_text = result.text if hasattr(result, 'text') else result
+        markdown_tag = "`" * 3
+        pattern = rf"{markdown_tag}(?:json)?\n?|{markdown_tag}"
+        clean_text = re.sub(pattern, "", raw_text).strip().lstrip('\ufeff')
+
+        with open(output_path, 'w', encoding='utf-8') as file:
             json.dump(
-                json.loads(result.text.replace("```", "").replace("json", "")),
-                file
+                json.loads(clean_text), file, ensure_ascii=False, indent=2
             )
     except Exception as e:
         print(e)
@@ -32,25 +37,59 @@ def ImgConvertTopo(
 
 '''Convert json topo into mn topo'''
 
+prompt = "This is a network topology diagram. Identify all nodes (hosts, switches) and links, and describe them in json format."
+prompt += "The final JSON should have four top-level keys: 'hosts', 'switches', and 'links'."
+
+# --- Hosts ---
+prompt += "In the 'hosts' list, show the id, name, ip_address (as a single string) and x, y location of all hosts (like h1, h2, HTTP, etc.). The value of 'id' and 'name' must be exactly the same for each host."
+# --- Switches ---
+prompt += "In the 'switches' list, show the id, name, and x, y location of all devices depicted as switches (like s1, s2, s3). The value of 'id' and 'name' must be exactly the same for each switch."
+prompt += "For each switch, determine its type: "
+prompt += "If it has IP addresses assigned (e.g., 'eth0: 192.168.0.253/30'), add a 'type' field with the value 'L3_switch' and include an 'ip_addresses' list."
+prompt += "If it has no IP addresses, add a 'type' field with the value 'L2_switch'."
+# --- Links ---
+prompt += "In the 'links' list, show the id and endpoints for all links, where the format of endpoints is [nodeA_name, nodeB_name]. Crucially, the endpoints must use the 'name' property of the corresponding node (Host, or Switch)."
+
+
+def openrouter_ConvertToTopo(model_name, key, img_path):
+    import base64
+    from openai import OpenAI
+
+    client = OpenAI(
+        base_url = "https://openrouter.ai/api/v1",
+        api_key = key,
+    )
+
+    with open(img_path, "rb") as image_file:
+        base64_image = base64.b64encode(image_file.read()).decode('utf-8')
+
+    response = client.chat.completions.create(
+        model = model_name,
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": prompt
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{base64_image}"
+                        }}]}],
+        response_format={ "type": "json_object" }
+    )
+    result_text = response.choices[0].message.content
+    return result_text
+
+
 def gemini_ConvertToTopo(model_name , key , img_path) : 
     import google.generativeai as genai
     import PIL.Image
 
     genai.configure(api_key=key)
     model = genai.GenerativeModel(model_name)
-    
-    prompt = "This is a network topology diagram. Identify all nodes (hosts, switches) and links, and describe them in json format."
-    prompt += "The final JSON should have four top-level keys: 'hosts', 'switches', and 'links'."
-
-    # --- Hosts ---
-    prompt += "In the 'hosts' list, show the id, name, ip_address (as a single string) and x, y location of all hosts (like h1, h2, HTTP, etc.). The value of 'id' and 'name' must be exactly the same for each host."
-    # --- Switches ---
-    prompt += "In the 'switches' list, show the id, name, and x, y location of all devices depicted as switches (like s1, s2, s3). The value of 'id' and 'name' must be exactly the same for each switch."
-    prompt += "For each switch, determine its type: "
-    prompt += "If it has IP addresses assigned (e.g., 'eth0: 192.168.0.253/30'), add a 'type' field with the value 'L3_switch' and include an 'ip_addresses' list."
-    prompt += "If it has no IP addresses, add a 'type' field with the value 'L2_switch'."
-    # --- Links ---
-    prompt += "In the 'links' list, show the id and endpoints for all links, where the format of endpoints is [nodeA_name, nodeB_name]. Crucially, the endpoints must use the 'name' property of the corresponding node (Host, or Switch)."
     
     return model.generate_content([prompt , PIL.Image.open(img_path)])
 
