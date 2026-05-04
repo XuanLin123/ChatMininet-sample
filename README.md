@@ -32,6 +32,10 @@ Please follow the official installation procedure provided by Containernet to se
 
 ## How to use
 
+```
+This is the only package that requires a specific version: google-adk==0.3.0
+```
+
 1. Clone this project
 
     ```bash
