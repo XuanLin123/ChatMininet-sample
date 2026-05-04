@@ -8,12 +8,24 @@ from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactServ
 from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, StdioServerParameters
 from contextlib import AsyncExitStack
 
+class Color:
+    PURPLE = '\033[95m'
+    CYAN = '\033[96m'
+    DARKCYAN = '\033[36m'
+    BLUE = '\033[94m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    BOLD = '\033[1m'
+    END = '\033[0m'
+
 # Load environment variables from .env file
-load_dotenv('/home/user/Desktop/ChatMininet_sample/MCPserver/adk_agent/.env')
+load_dotenv('/home/user/Desktop/ChatMininet-sample/MCPserver/adk_agent/.env')
 
 # --- Step 1: Import Tools from MCP Server ---
 async def get_tools_async(exit_stack: AsyncExitStack):
     print("Try to Connect MCP Filesystem server...")
+    print(f"{Color.CYAN}[SYSTEM]{Color.END} Connecting to server...")
 
     net_tools, net_exit_stack = await MCPToolset.from_server(
         connection_params=StdioServerParameters(
@@ -32,14 +44,14 @@ async def get_tools_async(exit_stack: AsyncExitStack):
     )
     await exit_stack.enter_async_context(time_exit_stack)
 
-    print("MCP Toolset Successfully Established.")
+    print(f"MCP Toolset Successfully Established.")
     return  net_tools + time_tools
 
 
 # --- Step 2: Agent Define ---
 async def get_agent_async(exit_stack: AsyncExitStack):
     tools = await get_tools_async(exit_stack)
-    print(f"From MCP Server get {len(tools)} tools.")
+    print(f"{Color.CYAN}[SYSTEM]{Color.END} From MCP Server get {len(tools)} tools.")
     root_agent = LlmAgent(
         model='gemini-2.5-flash-lite',
         name='filesystem_assistant',
@@ -73,7 +85,7 @@ async def async_main():
         print("Running agent...")
         
         while True:
-            query = input("User: ")
+            query = input(f"\n{Color.GREEN}{Color.BOLD}User: {Color.END}")
             if query.lower() in ["q", "exit", "bye"]:
                 break
 
@@ -102,7 +114,8 @@ async def async_main():
                     if part.function_response:
                         print("[TOOL RETURN] =>", part.function_response.response)
                     elif part.text:
-                        print("[TEXT] =>", part.text)
+                        # print(f"[TEXT] => {part.text}", flush=True) #debug use
+                        print(f"{Color.PURPLE}{Color.BOLD}Assistant:{Color.END} {part.text}")
                     # else:
                     #     print("[RAW EVENT]", event)
 
