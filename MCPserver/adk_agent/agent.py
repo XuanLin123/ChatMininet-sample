@@ -18,7 +18,7 @@ async def get_tools_async(exit_stack: AsyncExitStack):
     net_tools, net_exit_stack = await MCPToolset.from_server(
         connection_params=StdioServerParameters(
             command="uv",
-            args=["run", "/home/user/Desktop/ChatMininet_sample/MCPserver/Server/Network_server.py"]
+            args=["run", "/home/user/Desktop/ChatMininet-sample/MCPserver/Server/Network_server.py"]
         )
     )
     await exit_stack.enter_async_context(net_exit_stack)
@@ -27,7 +27,7 @@ async def get_tools_async(exit_stack: AsyncExitStack):
     time_tools, time_exit_stack = await MCPToolset.from_server(
         connection_params=StdioServerParameters(
             command="uv",
-            args=["run", "/home/user/Desktop/ChatMininet_sample/MCPserver/Server/Time_server.py"]
+            args=["run", "/home/user/Desktop/ChatMininet-sample/MCPserver/Server/Time_server.py"]
         )
     )
     await exit_stack.enter_async_context(time_exit_stack)
